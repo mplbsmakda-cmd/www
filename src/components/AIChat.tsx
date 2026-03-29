@@ -89,13 +89,16 @@ export default function AIChat() {
       }
 
       const isLocationQuery = /lokasi|alamat|peta|rute|dimana|posisi|maps/i.test(userMessage);
+      
+      // Explicitly choose only one tool to avoid "cannot be combined" error
+      const tools = isLocationQuery ? [{ googleMaps: {} }] : [{ googleSearch: {} }];
 
       const response = await ai.models.generateContent({
         model: modelName,
         contents: [{ role: "user", parts }],
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          tools: isLocationQuery ? [{ googleMaps: {} }] : [{ googleSearch: {} }],
+          tools: tools,
           thinkingConfig: isThinking ? { thinkingLevel: ThinkingLevel.HIGH } : undefined
         }
       });

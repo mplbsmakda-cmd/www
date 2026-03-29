@@ -18,6 +18,7 @@ import AdminDashboard from './components/AdminDashboard';
 import Registration from './components/Registration';
 import StudentDashboard from './components/StudentDashboard';
 import MajorAdminDashboard from './components/MajorAdminDashboard';
+import VirtualTour from './components/VirtualTour';
 
 import FAQ from './components/FAQ';
 
@@ -28,6 +29,7 @@ function HomePage() {
       <Features />
       <Stats />
       <Majors />
+      <VirtualTour />
       <Facilities />
       <Extracurriculars />
       <About />

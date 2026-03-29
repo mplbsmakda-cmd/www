@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
-import { Newspaper, MessageSquare, Plus, Loader2, LayoutDashboard, Users, TrendingUp, Clock, Settings, Image as ImageIcon, HelpCircle, Trophy, Building2, Briefcase, BarChart3, Quote, Globe } from 'lucide-react';
+import { Newspaper, MessageSquare, Plus, Loader2, LayoutDashboard, Users, TrendingUp, Clock, Settings, Image as ImageIcon, HelpCircle, Trophy, Building2, Briefcase, BarChart3, Quote, Globe, Activity } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import NewsManager from './admin/NewsManager';
@@ -20,11 +20,13 @@ import UserManager from './admin/UserManager';
 import AdminAIAgent from './admin/AdminAIAgent';
 import Analytics from './admin/Analytics';
 import SystemSettingsManager from './admin/SystemSettingsManager';
+import SystemLogsManager from './admin/SystemLogsManager';
+import { logAction } from '../services/logService';
 import { cn } from '../lib/utils';
 
 export default function AdminDashboard() {
   const { isAdmin, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'news' | 'messages' | 'registrations' | 'settings' | 'gallery' | 'faq' | 'extras' | 'facilities' | 'majors' | 'stats' | 'testimonials' | 'users' | 'system'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'news' | 'messages' | 'registrations' | 'settings' | 'gallery' | 'faq' | 'extras' | 'facilities' | 'majors' | 'stats' | 'testimonials' | 'users' | 'system' | 'logs'>('overview');
   const [stats, setStats] = useState({ newsCount: 0, messageCount: 0, userCount: 0, registrationCount: 0 });
   const [registrationData, setRegistrationData] = useState<any[]>([]);
 
@@ -298,6 +300,21 @@ export default function AdminDashboard() {
               <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={cn(
+              "pb-4 px-4 text-sm font-medium transition-all relative",
+              activeTab === 'logs' ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <div className="flex items-center space-x-2">
+              <Activity className="h-4 w-4" />
+              <span>Log</span>
+            </div>
+            {activeTab === 'logs' && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
         </div>
 
         {activeTab === 'overview' && (
@@ -379,6 +396,8 @@ export default function AdminDashboard() {
             <FacilitiesManager />
           ) : activeTab === 'system' ? (
             <SystemSettingsManager />
+          ) : activeTab === 'logs' ? (
+            <SystemLogsManager />
           ) : (
             <RegistrationManager />
           )}

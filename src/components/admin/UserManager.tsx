@@ -3,9 +3,12 @@ import { motion } from 'motion/react';
 import { Users, Mail, Shield, ShieldCheck, Loader2, Search, Briefcase, User as UserIcon } from 'lucide-react';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { logAction } from '../../services/logService';
+import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
 export default function UserManager() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [majors, setMajors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +44,7 @@ export default function UserManager() {
   const handleRoleChange = async (userId: string, newRole: string, majorId?: string) => {
     setUpdatingId(userId);
     try {
+      const userToUpdate = users.find(u => u.id === userId);
       const updateData: any = { role: newRole };
       if (newRole === 'major_admin' && majorId) {
         updateData.majorId = majorId;
@@ -48,9 +52,23 @@ export default function UserManager() {
         updateData.majorId = null;
       }
       await updateDoc(doc(db, 'users', userId), updateData);
+      
+      // Log action
+      if (currentUser) {
+        logAction(
+          'Update Role Pengguna',
+          currentUser.email || 'Admin',
+          `Mengubah role ${userToUpdate?.email} menjadi ${newRole}${majorId ? ` (Jurusan: ${majorId})` : ''}`,
+          'success'
+        );
+      }
+
       fetchUsers();
     } catch (error) {
       console.error("Error updating role:", error);
+      if (currentUser) {
+        logAction('Gagal Update Role', currentUser.email || 'Admin', `Gagal mengubah role pengguna: ${userId}`, 'error');
+      }
       alert("Gagal memperbarui role");
     } finally {
       setUpdatingId(null);

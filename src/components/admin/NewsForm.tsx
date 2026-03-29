@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { X, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { db, auth } from '../../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { logAction } from '../../services/logService';
 import { NewsItem } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -46,12 +47,17 @@ export default function NewsForm({ item, onClose, defaultCategory }: NewsFormPro
 
       if (item) {
         await updateDoc(doc(db, 'news', item.id), newsData);
+        logAction('Update Berita', auth.currentUser.email || 'Admin', `Memperbarui berita: ${formData.title}`, 'success');
       } else {
         await addDoc(collection(db, 'news'), newsData);
+        logAction('Tambah Berita', auth.currentUser.email || 'Admin', `Menambahkan berita baru: ${formData.title}`, 'success');
       }
       onClose();
     } catch (error) {
       console.error("Save failed:", error);
+      if (auth.currentUser) {
+        logAction('Gagal Simpan Berita', auth.currentUser.email || 'Admin', `Gagal menyimpan berita: ${formData.title}`, 'error');
+      }
     } finally {
       setLoading(false);
     }

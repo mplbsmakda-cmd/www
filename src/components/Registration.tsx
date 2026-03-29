@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   FileText, 
   Download, 
@@ -14,35 +14,75 @@ import {
   BookOpen,
   Calendar,
   Users,
-  LogIn
+  LogIn,
+  ChevronRight,
+  ChevronLeft,
+  ShieldCheck,
+  CreditCard,
+  Briefcase,
+  Loader2
 } from 'lucide-react';
 import { db, auth, googleProvider } from '../firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Registration() {
   const { user, loading } = useAuth();
+  const [step, setStep] = useState(1);
+  const [hasRegistered, setHasRegistered] = useState(false);
+  const [checkingRegistration, setCheckingRegistration] = useState(true);
+  
   const [formData, setFormData] = useState({
+    // Step 1: Personal
     fullName: '',
     email: '',
     phone: '',
     birthDate: '',
     gender: 'Laki-laki',
     address: '',
+    nik: '',
+    
+    // Step 2: Academic
     previousSchool: '',
+    nisn: '',
     major: '',
+    
+    // Step 3: Parent
+    parentName: '',
+    parentPhone: '',
+    parentOccupation: '',
+    
+    // Step 4: Final
+    agreedToTerms: false
   });
 
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        fullName: user.displayName || '',
-        email: user.email || '',
-      }));
-    }
+    const checkExisting = async () => {
+      if (user) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: user.displayName || '',
+          email: user.email || '',
+        }));
+
+        try {
+          const q = query(collection(db, 'registrations'), where('uid', '==', user.uid));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            setHasRegistered(true);
+          }
+        } catch (err) {
+          console.error("Error checking registration:", err);
+        } finally {
+          setCheckingRegistration(false);
+        }
+      } else {
+        setCheckingRegistration(false);
+      }
+    };
+    checkExisting();
   }, [user]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,12 +132,46 @@ export default function Registration() {
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
+
+  const validateStep = () => {
+    if (step === 1) {
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.birthDate || !formData.address || !formData.nik) return false;
+      if (formData.nik.length !== 16) {
+        setError("NIK harus 16 digit");
+        return false;
+      }
+    } else if (step === 2) {
+      if (!formData.previousSchool || !formData.nisn || !formData.major) return false;
+      if (formData.nisn.length !== 10) {
+        setError("NISN harus 10 digit");
+        return false;
+      }
+    } else if (step === 3) {
+      if (!formData.parentName || !formData.parentPhone || !formData.parentOccupation) return false;
+    }
+    setError(null);
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep()) {
+      setStep(prev => prev + 1);
+    }
+  };
+
+  const prevStep = () => setStep(prev => prev - 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.agreedToTerms) {
+      setError("Anda harus menyetujui syarat dan ketentuan.");
+      return;
+    }
+    
     setIsSubmitting(true);
     setError(null);
 
@@ -109,16 +183,6 @@ export default function Registration() {
         createdAt: serverTimestamp(),
       });
       setIsSuccess(true);
-      setFormData({
-        fullName: '',
-        email: '',
-        phone: '',
-        birthDate: '',
-        gender: 'Laki-laki',
-        address: '',
-        previousSchool: '',
-        major: '',
-      });
     } catch (err) {
       console.error('Registration error:', err);
       setError('Terjadi kesalahan saat mengirim pendaftaran. Silakan coba lagi.');
@@ -127,7 +191,7 @@ export default function Registration() {
     }
   };
 
-  if (loading) {
+  if (loading || checkingRegistration) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
@@ -239,6 +303,28 @@ export default function Registration() {
                   Masuk dengan Google
                 </button>
               </motion.div>
+            ) : hasRegistered ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-center"
+              >
+                <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ShieldCheck className="h-10 w-10 text-emerald-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Anda Sudah Terdaftar</h2>
+                <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                  Sistem mendeteksi bahwa Anda sudah mengirimkan formulir pendaftaran. 
+                  Silakan pantau status pendaftaran Anda melalui Dashboard Siswa.
+                </p>
+                <Link 
+                  to="/dashboard"
+                  className="inline-flex items-center px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
+                >
+                  Buka Dashboard Siswa
+                  <ChevronRight className="h-5 w-5 ml-2" />
+                </Link>
+              </motion.div>
             ) : (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -255,189 +341,247 @@ export default function Registration() {
                       Terima kasih telah mendaftar di SMK LPPMRI 2 KEDUNGREJA. 
                       Tim kami akan segera menghubungi Anda melalui email atau telepon.
                     </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                      <button 
-                        onClick={() => setIsSuccess(false)}
-                        className="w-full sm:w-auto px-8 py-3 bg-white text-blue-600 border border-blue-600 font-bold rounded-2xl hover:bg-blue-50 transition-all"
-                      >
-                        Kirim Pendaftaran Lain
-                      </button>
-                      <Link 
-                        to="/dashboard"
-                        className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all"
-                      >
-                        Lihat Dashboard Siswa
-                      </Link>
-                    </div>
+                    <Link 
+                      to="/dashboard"
+                      className="inline-flex items-center px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
+                    >
+                      Lihat Dashboard Siswa
+                      <ChevronRight className="h-5 w-5 ml-2" />
+                    </Link>
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-8">Formulir Pendaftaran Online</h2>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Full Name */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <User className="h-4 w-4 mr-2 text-blue-600" />
-                            Nama Lengkap
-                          </label>
-                          <input
-                            type="text"
-                            name="fullName"
-                            required
-                            value={formData.fullName}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama lengkap"
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    <div className="flex items-center justify-between mb-8">
+                      <h2 className="text-2xl font-bold text-gray-900">Formulir Pendaftaran</h2>
+                      <div className="flex items-center space-x-2">
+                        {[1, 2, 3, 4].map((s) => (
+                          <div 
+                            key={s} 
+                            className={cn(
+                              "w-8 h-2 rounded-full transition-all",
+                              s === step ? "bg-blue-600 w-12" : s < step ? "bg-emerald-500" : "bg-gray-200"
+                            )}
                           />
-                        </div>
+                        ))}
+                      </div>
+                    </div>
 
-                        {/* Email */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <Mail className="h-4 w-4 mr-2 text-blue-600" />
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            name="email"
-                            required
-                            value={formData.email}
-                            onChange={handleChange}
-                            placeholder="contoh@email.com"
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-
-                        {/* Phone */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <Phone className="h-4 w-4 mr-2 text-blue-600" />
-                            No. WhatsApp/Telepon
-                          </label>
-                          <input
-                            type="tel"
-                            name="phone"
-                            required
-                            value={formData.phone}
-                            onChange={handleChange}
-                            placeholder="08xxxxxxxxxx"
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-
-                        {/* Birth Date */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                            Tanggal Lahir
-                          </label>
-                          <input
-                            type="date"
-                            name="birthDate"
-                            required
-                            value={formData.birthDate}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-
-                        {/* Gender */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <Users className="h-4 w-4 mr-2 text-blue-600" />
-                            Jenis Kelamin
-                          </label>
-                          <select
-                            name="gender"
-                            value={formData.gender}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                      <AnimatePresence mode="wait">
+                        {step === 1 && (
+                          <motion.div
+                            key="step1"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
                           >
-                            <option value="Laki-laki">Laki-laki</option>
-                            <option value="Perempuan">Perempuan</option>
-                          </select>
-                        </div>
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                              <User className="h-5 w-5 mr-2 text-blue-600" />
+                              Data Pribadi
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Nama Lengkap</label>
+                                <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama sesuai ijazah" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">NIK (16 Digit)</label>
+                                <input type="text" name="nik" required maxLength={16} value={formData.nik} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan 16 digit NIK" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                                <input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="contoh@email.com" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">No. WhatsApp</label>
+                                <input type="tel" name="phone" required value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08xxxxxxxxxx" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Tanggal Lahir</label>
+                                <input type="date" name="birthDate" required value={formData.birthDate} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Jenis Kelamin</label>
+                                <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                                  <option value="Laki-laki">Laki-laki</option>
+                                  <option value="Perempuan">Perempuan</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 mb-2">Alamat Lengkap</label>
+                              <textarea name="address" required value={formData.address} onChange={handleChange} rows={3} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Alamat sesuai KK" />
+                            </div>
+                          </motion.div>
+                        )}
 
-                        {/* Major */}
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                            <BookOpen className="h-4 w-4 mr-2 text-blue-600" />
-                            Pilihan Jurusan
-                          </label>
-                          <select
-                            name="major"
-                            required
-                            value={formData.major}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        {step === 2 && (
+                          <motion.div
+                            key="step2"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
                           >
-                            <option value="">Pilih Jurusan</option>
-                            {majors.map((major, index) => (
-                              <option key={index} value={major}>{major}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                              <School className="h-5 w-5 mr-2 text-blue-600" />
+                              Data Akademik
+                            </h3>
+                            <div className="space-y-6">
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Asal Sekolah (SMP/MTs)</label>
+                                <input type="text" name="previousSchool" required value={formData.previousSchool} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama sekolah asal" />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <label className="block text-sm font-bold text-gray-700 mb-2">NISN (10 Digit)</label>
+                                  <input type="text" name="nisn" required maxLength={10} value={formData.nisn} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="10 digit NISN" />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-bold text-gray-700 mb-2">Pilihan Jurusan</label>
+                                  <select name="major" required value={formData.major} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">Pilih Jurusan</option>
+                                    {majors.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
 
-                      {/* Previous School */}
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                          <School className="h-4 w-4 mr-2 text-blue-600" />
-                          Asal Sekolah (SMP/MTs)
-                        </label>
-                        <input
-                          type="text"
-                          name="previousSchool"
-                          required
-                          value={formData.previousSchool}
-                          onChange={handleChange}
-                          placeholder="Masukkan nama sekolah asal"
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                      </div>
+                        {step === 3 && (
+                          <motion.div
+                            key="step3"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                              <Users className="h-5 w-5 mr-2 text-blue-600" />
+                              Data Orang Tua / Wali
+                            </h3>
+                            <div className="space-y-6">
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Nama Orang Tua / Wali</label>
+                                <input type="text" name="parentName" required value={formData.parentName} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama lengkap orang tua/wali" />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <label className="block text-sm font-bold text-gray-700 mb-2">No. WhatsApp Orang Tua</label>
+                                  <input type="tel" name="parentPhone" required value={formData.parentPhone} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08xxxxxxxxxx" />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-bold text-gray-700 mb-2">Pekerjaan Orang Tua</label>
+                                  <input type="text" name="parentOccupation" required value={formData.parentOccupation} onChange={handleChange} className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Pekerjaan saat ini" />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
 
-                      {/* Address */}
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                          Alamat Lengkap
-                        </label>
-                        <textarea
-                          name="address"
-                          required
-                          value={formData.address}
-                          onChange={handleChange}
-                          rows={3}
-                          placeholder="Masukkan alamat lengkap tempat tinggal"
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
-                        />
-                      </div>
+                        {step === 4 && (
+                          <motion.div
+                            key="step4"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                              <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
+                              Konfirmasi & Pernyataan
+                            </h3>
+                            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4">
+                              <p className="text-sm text-blue-800 leading-relaxed">
+                                Saya menyatakan bahwa data yang saya masukkan adalah benar dan dapat dipertanggungjawabkan. 
+                                Saya bersedia mengikuti seluruh peraturan yang berlaku di SMK LPPMRI 2 KEDUNGREJA.
+                              </p>
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  name="agreedToTerms" 
+                                  checked={formData.agreedToTerms} 
+                                  onChange={handleChange}
+                                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Saya setuju dengan syarat dan ketentuan pendaftaran.</span>
+                              </label>
+                            </div>
+
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
+                              <h4 className="font-bold text-gray-900 mb-4">Ringkasan Pendaftaran:</h4>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="text-gray-500">Nama:</div>
+                                <div className="font-medium text-gray-900">{formData.fullName}</div>
+                                <div className="text-gray-500">NIK:</div>
+                                <div className="font-medium text-gray-900">{formData.nik}</div>
+                                <div className="text-gray-500">NISN:</div>
+                                <div className="font-medium text-gray-900">{formData.nisn}</div>
+                                <div className="text-gray-500">Jurusan:</div>
+                                <div className="font-medium text-blue-600">{formData.major}</div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {error && (
-                        <div className="flex items-center p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100">
+                        <motion.div 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100"
+                        >
                           <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-                          <span className="text-sm">{error}</span>
-                        </div>
+                          <span className="text-sm font-medium">{error}</span>
+                        </motion.div>
                       )}
 
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className={cn(
-                          "w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center",
-                          isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-700"
-                        )}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
-                            Mengirim...
-                          </>
+                      <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                        {step > 1 ? (
+                          <button
+                            type="button"
+                            onClick={prevStep}
+                            className="flex items-center px-6 py-3 text-gray-600 font-bold hover:text-blue-600 transition-colors"
+                          >
+                            <ChevronLeft className="h-5 w-5 mr-2" />
+                            Kembali
+                          </button>
+                        ) : <div />}
+
+                        {step < 4 ? (
+                          <button
+                            type="button"
+                            onClick={nextStep}
+                            className="flex items-center px-8 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                          >
+                            Lanjut
+                            <ChevronRight className="h-5 w-5 ml-2" />
+                          </button>
                         ) : (
-                          'Kirim Pendaftaran'
+                          <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className={cn(
+                              "px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center",
+                              isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-700"
+                            )}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="h-5 w-5 animate-spin mr-3" />
+                                Memproses...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-5 w-5 mr-2" />
+                                Kirim Pendaftaran
+                              </>
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </form>
                   </>
                 )}

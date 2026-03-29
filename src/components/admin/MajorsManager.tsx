@@ -9,6 +9,8 @@ import {
   updateDoc, deleteDoc, doc, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { logAction } from '../../services/logService';
+import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
 const iconMap: Record<string, any> = {
@@ -16,6 +18,7 @@ const iconMap: Record<string, any> = {
 };
 
 export default function MajorsManager() {
+  const { user: currentUser } = useAuth();
   const [majors, setMajors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -57,27 +60,43 @@ export default function MajorsManager() {
     try {
       if (currentMajor?.id) {
         await updateDoc(doc(db, 'majors', currentMajor.id), data);
+        if (currentUser) {
+          logAction('Update Jurusan', currentUser.email || 'Admin', `Memperbarui informasi jurusan: ${data.title}`, 'success');
+        }
       } else {
         await addDoc(collection(db, 'majors'), {
           ...data,
           createdAt: serverTimestamp()
         });
+        if (currentUser) {
+          logAction('Tambah Jurusan', currentUser.email || 'Admin', `Menambahkan jurusan baru: ${data.title}`, 'success');
+        }
       }
       setIsEditing(false);
       setCurrentMajor(null);
       fetchMajors();
     } catch (error) {
       console.error("Error saving major:", error);
+      if (currentUser) {
+        logAction('Gagal Simpan Jurusan', currentUser.email || 'Admin', `Gagal menyimpan jurusan: ${data.title}`, 'error');
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
+    const majorToDelete = majors.find(m => m.id === id);
     if (!confirm("Apakah Anda yakin ingin menghapus jurusan ini?")) return;
     try {
       await deleteDoc(doc(db, 'majors', id));
+      if (currentUser) {
+        logAction('Hapus Jurusan', currentUser.email || 'Admin', `Menghapus jurusan: ${majorToDelete?.title}`, 'warning');
+      }
       fetchMajors();
     } catch (error) {
       console.error("Error deleting major:", error);
+      if (currentUser) {
+        logAction('Gagal Hapus Jurusan', currentUser.email || 'Admin', `Gagal menghapus jurusan: ${id}`, 'error');
+      }
     }
   };
 

@@ -27,54 +27,61 @@ export default function AdminAIAgent() {
     const args = JSON.parse(argsString);
 
     try {
+      let resultMessage = "";
       if (name === 'update_about_section') {
         await setDoc(doc(db, 'settings', 'about'), {
           content: JSON.stringify(args),
           updatedAt: serverTimestamp()
         });
-        return "Berhasil memperbarui bagian 'Tentang Kami'.";
+        resultMessage = "Berhasil memperbarui bagian 'Tentang Kami'.";
       } else if (name === 'update_hero_section') {
         await setDoc(doc(db, 'settings', 'hero'), {
           content: JSON.stringify(args),
           updatedAt: serverTimestamp()
         });
-        return "Berhasil memperbarui bagian 'Hero'.";
+        resultMessage = "Berhasil memperbarui bagian 'Hero'.";
       } else if (name === 'update_contact_section') {
         await setDoc(doc(db, 'settings', 'contact'), {
           content: JSON.stringify(args),
           updatedAt: serverTimestamp()
         });
-        return "Berhasil memperbarui informasi kontak.";
+        resultMessage = "Berhasil memperbarui informasi kontak.";
       } else if (name === 'create_news_article') {
         await addDoc(collection(db, 'news'), {
           ...args,
           authorUid: auth.currentUser?.uid,
           createdAt: serverTimestamp()
         });
-        return `Berhasil membuat artikel berita baru: "${args.title}".`;
+        resultMessage = `Berhasil membuat artikel berita baru: "${args.title}".`;
       } else if (name === 'add_faq_item') {
         await addDoc(collection(db, 'faqs'), {
           ...args,
           createdAt: serverTimestamp()
         });
-        return `Berhasil menambahkan FAQ baru: "${args.question}".`;
+        resultMessage = `Berhasil menambahkan FAQ baru: "${args.question}".`;
       } else if (name === 'add_testimonial') {
         await addDoc(collection(db, 'testimonials'), {
           ...args,
           createdAt: serverTimestamp()
         });
-        return `Berhasil menambahkan testimoni baru dari: "${args.name}".`;
+        resultMessage = `Berhasil menambahkan testimoni baru dari: "${args.name}".`;
       } else if (name === 'add_major') {
         await addDoc(collection(db, 'majors'), {
           ...args,
           createdAt: serverTimestamp()
         });
-        return `Berhasil menambahkan jurusan baru: "${args.title}".`;
+        resultMessage = `Berhasil menambahkan jurusan baru: "${args.title}".`;
+      } else {
+        resultMessage = "Fungsi tidak dikenal.";
       }
-      return "Fungsi tidak dikenal.";
-    } catch (error) {
+      
+      setStatus({ type: 'success', message: resultMessage });
+      return resultMessage;
+    } catch (error: any) {
       console.error(`Error executing ${name}:`, error);
-      throw error;
+      const errorMessage = `Gagal menjalankan ${name}: ${error.message || 'Terjadi kesalahan internal'}`;
+      setStatus({ type: 'error', message: errorMessage });
+      throw new Error(errorMessage);
     }
   };
 
@@ -105,9 +112,8 @@ export default function AdminAIAgent() {
           try {
             const result = await executeToolCall(toolCall);
             toolResponses.push(result);
-            setStatus({ type: 'success', message: result });
-          } catch (err) {
-            setStatus({ type: 'error', message: `Gagal menjalankan perintah: ${toolCall.function.name}` });
+          } catch (err: any) {
+            toolResponses.push(`Error: ${err.message}`);
           }
         }
         
