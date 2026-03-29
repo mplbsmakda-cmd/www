@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User profile photo URL" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "News": {
+      "title": "School News",
+      "description": "Latest news and events from the school",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "News title" },
+        "content": { "type": "string", "description": "News content" },
+        "authorUid": { "type": "string", "description": "Author user ID" },
+        "imageUrl": { "type": "string", "description": "News image URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "News creation timestamp" }
+      },
+      "required": ["title", "content", "authorUid"]
+    },
+    "ContactMessage": {
+      "title": "Contact Message",
+      "description": "Messages sent from the contact form",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Sender name" },
+        "email": { "type": "string", "description": "Sender email" },
+        "message": { "type": "string", "description": "Message content" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Message timestamp" }
+      },
+      "required": ["name", "email", "message"]
+    },
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global website settings and content",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "The content of the setting (can be JSON string)" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["content"]
+    },
+    "Registration": {
+      "title": "Student Registration",
+      "description": "New student registration data",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "description": "Full name of the student" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "birthDate": { "type": "string", "format": "date", "description": "Date of birth" },
+        "gender": { "type": "string", "enum": ["Laki-laki", "Perempuan"], "description": "Gender" },
+        "address": { "type": "string", "description": "Full address" },
+        "previousSchool": { "type": "string", "description": "Previous school name" },
+        "major": { "type": "string", "description": "Selected major" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "accepted", "rejected"], "description": "Registration status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Registration timestamp" }
+      },
+      "required": ["fullName", "email", "phone", "major"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "News and events collection"
+    },
+    "/messages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "Contact form messages"
+    },
+    "/settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Global website settings"
+    },
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Student registration collection"
+    }
+  }
+}

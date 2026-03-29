@@ -1,0 +1,7 @@
+{
+  "name": "SMK LPPMRI 2 KEDUNGREJA",
+  "description": "Website resmi SMK LPPMRI 2 KEDUNGREJA - Menyiapkan generasi unggul, terampil, dan berkarakter.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
