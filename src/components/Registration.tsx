@@ -71,10 +71,9 @@ export default function Registration() {
   };
 
   const majors = [
-    'Teknik Kendaraan Ringan',
-    'Teknik Komputer & Jaringan',
-    'Teknik Instalasi Tenaga Listrik',
-    'Teknik Sepeda Motor',
+    'Manajemen Perkantoran dan Layanan Bisnis (MPLB)',
+    'Akuntansi dan Keuangan Lembaga (AKL)',
+    'Teknik Jaringan Komputer dan Telekomunikasi (TJKT)',
   ];
 
   const requirements = [

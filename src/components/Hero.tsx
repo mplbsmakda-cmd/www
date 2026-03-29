@@ -1,10 +1,34 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Hero() {
   const { user } = useAuth();
+  const [content, setContent] = useState({
+    title: 'Membangun Masa Depan',
+    subtitle: 'Unggul & Berkarakter',
+    description: 'SMK LPPMRI 2 KEDUNGREJA berkomitmen mencetak lulusan yang siap kerja, berjiwa wirausaha, dan memiliki kompetensi global di era digital.',
+    imageUrl: 'https://picsum.photos/seed/students/1000/1200'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'website');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().hero) {
+          setContent(docSnap.data().hero);
+        }
+      } catch (error) {
+        console.error("Error fetching hero settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-white">
@@ -32,8 +56,8 @@ export default function Hero() {
               transition={{ delay: 0.1 }}
               className="text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 mb-8 leading-[1.1]"
             >
-              Membangun Masa Depan <br />
-              <span className="text-blue-600">Unggul & Berkarakter</span>
+              {content.title} <br />
+              <span className="text-blue-600">{content.subtitle}</span>
             </motion.h1>
 
             <motion.p
@@ -42,8 +66,7 @@ export default function Hero() {
               transition={{ delay: 0.2 }}
               className="max-w-2xl mx-auto lg:mx-0 text-lg text-slate-600 mb-12 leading-relaxed"
             >
-              SMK LPPMRI 2 KEDUNGREJA berkomitmen mencetak lulusan yang siap kerja, 
-              berjiwa wirausaha, dan memiliki kompetensi global di era digital.
+              {content.description}
             </motion.p>
 
             <motion.div
@@ -85,7 +108,7 @@ export default function Hero() {
           >
             <div className="relative z-10 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white">
               <img
-                src="https://picsum.photos/seed/students/1000/1200"
+                src={content.imageUrl}
                 alt="Siswa SMK LPPMRI 2 KEDUNGREJA"
                 className="w-full h-auto object-cover"
                 referrerPolicy="no-referrer"

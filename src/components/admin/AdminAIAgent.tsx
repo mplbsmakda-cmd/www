@@ -33,6 +33,18 @@ export default function AdminAIAgent() {
           updatedAt: serverTimestamp()
         });
         return "Berhasil memperbarui bagian 'Tentang Kami'.";
+      } else if (name === 'update_hero_section') {
+        await setDoc(doc(db, 'settings', 'hero'), {
+          content: JSON.stringify(args),
+          updatedAt: serverTimestamp()
+        });
+        return "Berhasil memperbarui bagian 'Hero'.";
+      } else if (name === 'update_contact_section') {
+        await setDoc(doc(db, 'settings', 'contact'), {
+          content: JSON.stringify(args),
+          updatedAt: serverTimestamp()
+        });
+        return "Berhasil memperbarui informasi kontak.";
       } else if (name === 'create_news_article') {
         await addDoc(collection(db, 'news'), {
           ...args,
@@ -40,6 +52,24 @@ export default function AdminAIAgent() {
           createdAt: serverTimestamp()
         });
         return `Berhasil membuat artikel berita baru: "${args.title}".`;
+      } else if (name === 'add_faq_item') {
+        await addDoc(collection(db, 'faqs'), {
+          ...args,
+          createdAt: serverTimestamp()
+        });
+        return `Berhasil menambahkan FAQ baru: "${args.question}".`;
+      } else if (name === 'add_testimonial') {
+        await addDoc(collection(db, 'testimonials'), {
+          ...args,
+          createdAt: serverTimestamp()
+        });
+        return `Berhasil menambahkan testimoni baru dari: "${args.name}".`;
+      } else if (name === 'add_major') {
+        await addDoc(collection(db, 'majors'), {
+          ...args,
+          createdAt: serverTimestamp()
+        });
+        return `Berhasil menambahkan jurusan baru: "${args.title}".`;
       }
       return "Fungsi tidak dikenal.";
     } catch (error) {

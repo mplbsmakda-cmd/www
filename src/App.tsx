@@ -9,12 +9,15 @@ import About from './components/About';
 import Gallery from './components/Gallery';
 import Testimonials from './components/Testimonials';
 import News from './components/News';
+import Extracurriculars from './components/Extracurriculars';
+import Facilities from './components/Facilities';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AIChat from './components/AIChat';
 import AdminDashboard from './components/AdminDashboard';
 import Registration from './components/Registration';
 import StudentDashboard from './components/StudentDashboard';
+import MajorAdminDashboard from './components/MajorAdminDashboard';
 
 import FAQ from './components/FAQ';
 
@@ -25,6 +28,8 @@ function HomePage() {
       <Features />
       <Stats />
       <Majors />
+      <Facilities />
+      <Extracurriculars />
       <About />
       <Gallery />
       <Testimonials />
@@ -46,10 +51,12 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/majors" element={<Majors />} />
             <Route path="/majors/:id" element={<MajorDetail />} />
+            <Route path="/extracurriculars" element={<Extracurriculars />} />
             <Route path="/news" element={<News />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/registration" element={<Registration />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/major" element={<MajorAdminDashboard />} />
             <Route path="/dashboard" element={<StudentDashboard />} />
           </Routes>
         </main>

@@ -1,12 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Send, Mail, Phone, MapPin } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
 export default function Contact() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [contactInfo, setContactInfo] = useState({
+    address: 'Jl. Raya Kedungreja No. 123, Kedungreja, Cilacap, Jawa Tengah',
+    phone: '(0282) 1234567',
+    email: 'info@smklppmri2kedungreja.sch.id',
+    mapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.5358043641775!2d108.82098667411933!3d-7.534882174246194!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e656d0a7a0b8a3b%3A0x6b158c3a51f84b65!2sSMK%20LPPM%20RI%202%20KEDUNGREJA!5e0!3m2!1sid!2sid!4v1711676543210!5m2!1sid!2sid'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'website');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().contact) {
+          setContactInfo(docSnap.data().contact);
+        }
+      } catch (error) {
+        console.error("Error fetching contact settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +67,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900">Alamat</div>
-                  <div className="text-sm text-gray-600">Jl. Raya Kedungreja No. 2, Cilacap, Jawa Tengah</div>
+                  <div className="text-sm text-gray-600">{contactInfo.address}</div>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -55,7 +76,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900">Telepon</div>
-                  <div className="text-sm text-gray-600">(0282) 1234567</div>
+                  <div className="text-sm text-gray-600">{contactInfo.phone}</div>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -64,20 +85,21 @@ export default function Contact() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900">Email</div>
-                  <div className="text-sm text-gray-600">info@smklppmri2kedungreja.sch.id</div>
+                  <div className="text-sm text-gray-600">{contactInfo.email}</div>
                 </div>
               </div>
             </div>
 
             <div className="mt-12 rounded-2xl overflow-hidden h-64 border border-gray-200">
               <iframe
-                title="Google Maps"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15822.38555816431!2d108.85!3d-7.6!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwMzYnMDAuMCJTIDEwOMKwNTEnMDAuMCJF!5e0!3m2!1sen!2sid!4v1620000000000!5m2!1sen!2sid"
+                title="Google Maps SMK LPPMRI 2 KEDUNGREJA"
+                src={contactInfo.mapEmbedUrl}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
               ></iframe>
             </div>
           </motion.div>

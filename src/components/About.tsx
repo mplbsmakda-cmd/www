@@ -28,13 +28,16 @@ export default function About() {
   useEffect(() => {
     const fetchAbout = async () => {
       try {
-        const docRef = doc(db, 'settings', 'about');
+        const docRef = doc(db, 'settings', 'website');
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.content) {
-            setContent(JSON.parse(data.content));
-          }
+        if (docSnap.exists() && docSnap.data().about) {
+          const aboutData = docSnap.data().about;
+          setContent({
+            title: aboutData.title,
+            description: aboutData.description,
+            vision: aboutData.vision,
+            mission: aboutData.mission.split('\n').filter((m: string) => m.trim() !== '')
+          });
         }
       } catch (error) {
         console.error("Error fetching about content:", error);

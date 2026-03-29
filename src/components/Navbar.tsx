@@ -10,7 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isMajorAdmin } = useAuth();
   const location = useLocation();
 
   const handleLogin = async () => {
@@ -29,6 +29,9 @@ export default function Navbar() {
           createdAt: new Date().toISOString(),
         });
       }
+      
+      // Redirect to the specified domain after successful login
+      window.location.href = 'https://www-ten-blue.vercel.app/';
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -46,6 +49,7 @@ export default function Navbar() {
     { name: 'Beranda', path: '/' },
     { name: 'Tentang Kami', path: '/about' },
     { name: 'Jurusan', path: '/majors' },
+    { name: 'Ekstrakurikuler', path: '/extracurriculars' },
     { name: 'Berita', path: '/news' },
     { name: 'PPDB', path: '/registration' },
     { name: 'Kontak', path: '/contact' },
@@ -90,6 +94,17 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="h-4 w-4 mr-2" />
                 Admin
+              </Link>
+            ) : isMajorAdmin ? (
+              <Link
+                to="/admin/major"
+                className={cn(
+                  "inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                  location.pathname === '/admin/major' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Admin Jurusan
               </Link>
             ) : user && (
               <Link
@@ -164,6 +179,17 @@ export default function Navbar() {
                   )}
                 >
                   Dashboard Admin
+                </Link>
+              ) : isMajorAdmin ? (
+                <Link
+                  to="/admin/major"
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "block px-3 py-2 rounded-md text-base font-medium",
+                    location.pathname === '/admin/major' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  Dashboard Admin Jurusan
                 </Link>
               ) : user && (
                 <Link

@@ -4,17 +4,20 @@ import { X, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { db, auth } from '../../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { NewsItem } from '../../types';
+import { cn } from '../../lib/utils';
 
 interface NewsFormProps {
   item: NewsItem | null;
   onClose: () => void;
+  defaultCategory?: string;
 }
 
-export default function NewsForm({ item, onClose }: NewsFormProps) {
+export default function NewsForm({ item, onClose, defaultCategory }: NewsFormProps) {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     imageUrl: '',
+    category: defaultCategory || '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -24,9 +27,10 @@ export default function NewsForm({ item, onClose }: NewsFormProps) {
         title: item.title,
         content: item.content,
         imageUrl: item.imageUrl || '',
+        category: item.category || defaultCategory || '',
       });
     }
-  }, [item]);
+  }, [item, defaultCategory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +108,21 @@ export default function NewsForm({ item, onClose }: NewsFormProps) {
                 />
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Kategori / Jurusan</label>
+            <input
+              type="text"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              readOnly={!!defaultCategory}
+              className={cn(
+                "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all",
+                defaultCategory && "bg-gray-50 text-gray-500 cursor-not-allowed"
+              )}
+              placeholder="e.g. Umum, TJKT, MPLB"
+            />
           </div>
 
           <div>

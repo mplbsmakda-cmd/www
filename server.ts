@@ -28,7 +28,9 @@ Kemampuan Anda:
 3. Memberikan saran konten untuk artikel berita sekolah.
 4. Menjelaskan struktur database (User, News, ContactMessages).
 5. Memberikan panduan teknis tentang pengaturan panel admin.
-6. **MENGIMPLEMENTASIKAN PERUBAHAN**: Anda dapat menyarankan dan langsung menerapkan perubahan pada bagian 'Tentang Kami' atau membuat artikel berita baru jika diminta.
+6. **MENGIMPLEMENTASIKAN PERUBAHAN**: Anda dapat menyarankan dan langsung menerapkan perubahan pada berbagai bagian website:
+   - Bagian 'Tentang Kami', 'Hero', dan 'Kontak'.
+   - Menambahkan Berita, FAQ, Testimoni, Statistik, Fasilitas, Ekstrakurikuler, dan Jurusan.
 
 Konteks Teknis:
 - Backend: Express.js proxy ke OpenRouter.
@@ -63,6 +65,40 @@ Saat menyarankan perubahan konten, Anda dapat memanggil fungsi yang tersedia. Ja
       {
         type: "function",
         function: {
+          name: "update_hero_section",
+          description: "Memperbarui konten bagian Hero (paling atas) di website.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Judul utama Hero" },
+              subtitle: { type: "string", description: "Sub-judul Hero" },
+              ctaText: { type: "string", description: "Teks tombol aksi" },
+              imageUrl: { type: "string", description: "URL gambar latar belakang" }
+            },
+            required: ["title", "subtitle", "ctaText", "imageUrl"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "update_contact_section",
+          description: "Memperbarui informasi kontak sekolah.",
+          parameters: {
+            type: "object",
+            properties: {
+              address: { type: "string", description: "Alamat lengkap sekolah" },
+              phone: { type: "string", description: "Nomor telepon sekolah" },
+              email: { type: "string", description: "Email resmi sekolah" },
+              mapUrl: { type: "string", description: "URL embed Google Maps" }
+            },
+            required: ["address", "phone", "email", "mapUrl"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
           name: "create_news_article",
           description: "Membuat artikel berita baru untuk sekolah.",
           parameters: {
@@ -74,6 +110,58 @@ Saat menyarankan perubahan konten, Anda dapat memanggil fungsi yang tersedia. Ja
               imageUrl: { type: "string", description: "URL gambar untuk berita (opsional)" }
             },
             required: ["title", "content", "category"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "add_faq_item",
+          description: "Menambahkan pertanyaan yang sering diajukan (FAQ) baru.",
+          parameters: {
+            type: "object",
+            properties: {
+              question: { type: "string", description: "Pertanyaan" },
+              answer: { type: "string", description: "Jawaban" }
+            },
+            required: ["question", "answer"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "add_testimonial",
+          description: "Menambahkan testimoni siswa atau alumni baru.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nama pemberi testimoni" },
+              role: { type: "string", description: "Peran (misal: Alumni 2020, Siswa Kelas XII)" },
+              content: { type: "string", description: "Isi testimoni" },
+              avatar: { type: "string", description: "URL avatar (opsional)" }
+            },
+            required: ["name", "role", "content"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "add_major",
+          description: "Menambahkan program keahlian (jurusan) baru.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Nama jurusan" },
+              description: { type: "string", description: "Deskripsi singkat" },
+              longDescription: { type: "string", description: "Deskripsi lengkap" },
+              icon: { type: "string", enum: ["Briefcase", "Calculator", "Laptop", "Code", "Settings", "PenTool", "Cpu"], description: "Ikon untuk jurusan" },
+              color: { type: "string", description: "Kelas warna Tailwind (misal: bg-blue-500)" },
+              skills: { type: "array", items: { type: "string" }, description: "Daftar kompetensi keahlian" },
+              prospects: { type: "array", items: { type: "string" }, description: "Daftar prospek karir" }
+            },
+            required: ["title", "description", "longDescription", "icon", "color", "skills", "prospects"]
           }
         }
       }
@@ -89,7 +177,7 @@ Saat menyarankan perubahan konten, Anda dapat memanggil fungsi yang tersedia. Ja
           "X-Title": "SMK LPPMRI 2 Admin Panel",
         },
         body: JSON.stringify({
-          model: "stepfun/step-flash-free",
+          model: "stepfun/step-1-flash",
           messages: [
             {
               role: "system",

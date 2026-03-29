@@ -1,7 +1,29 @@
+import { useState, useEffect } from 'react';
 import { Facebook, Instagram, Youtube, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Footer() {
+  const [aboutInfo, setAboutInfo] = useState({
+    description: 'Mewujudkan pendidikan kejuruan yang inovatif dan berdaya saing global untuk masa depan yang lebih cerah.'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'website');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().about) {
+          setAboutInfo(docSnap.data().about);
+        }
+      } catch (error) {
+        console.error("Error fetching footer settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   return (
     <footer className="bg-white border-t border-gray-100 pt-20 pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,7 +39,7 @@ export default function Footer() {
               <span className="font-bold text-xl tracking-tight text-gray-900">SMK LPPMRI 2 KEDUNGREJA</span>
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Mewujudkan pendidikan kejuruan yang inovatif dan berdaya saing global untuk masa depan yang lebih cerah.
+              {aboutInfo.description}
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors">
@@ -48,10 +70,9 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-6">Jurusan</h4>
             <ul className="space-y-4">
-              <li><span className="text-sm text-gray-500">Teknik Kendaraan Ringan</span></li>
-              <li><span className="text-sm text-gray-500">Teknik Komputer & Jaringan</span></li>
-              <li><span className="text-sm text-gray-500">Teknik Instalasi Tenaga Listrik</span></li>
-              <li><span className="text-sm text-gray-500">Teknik Sepeda Motor</span></li>
+              <li><span className="text-sm text-gray-500">Manajemen Perkantoran (MPLB)</span></li>
+              <li><span className="text-sm text-gray-500">Akuntansi & Keuangan (AKL)</span></li>
+              <li><span className="text-sm text-gray-500">Teknik Jaringan Komputer (TJKT)</span></li>
             </ul>
           </div>
 

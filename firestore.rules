@@ -1,6 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid (string), email (string), role (string), displayName (string), photoURL (string)
+    //
+    // Collection: news
+    // Fields: title (string), content (string), authorUid (string), imageUrl (string), createdAt (timestamp)
+    //
+    // Collection: messages
+    // Fields: name (string), email (string), message (string), createdAt (timestamp)
+    //
+    // Collection: settings
+    // Fields: content (string), updatedAt (timestamp)
+    //
+    // Collection: registrations
+    // Fields: fullName (string), email (string), phone (string), major (string), status (string), uid (string)
+    //
+    // Collection: majors
+    // Fields: title (string), description (string), longDescription (string), icon (string), color (string)
+    //
+    // Collection: stats
+    // Fields: label (string), value (string), icon (string), color (string), bg (string), order (number)
+    //
+    // Collection: testimonials
+    // Fields: name (string), role (string), content (string), avatar (string)
+    //
+    // Collection: extracurriculars
+    // Fields: title (string), description (string), icon (string)
+    //
+    // Collection: facilities
+    // Fields: title (string), description (string), icon (string)
+    //
+    // Collection: faqs
+    // Fields: question (string), answer (string), order (number)
+    //
+    // Collection: gallery
+    // Fields: url (string), caption (string), category (string)
+    //
+    // ===============================================================
+
     // Helper functions
     function isAuthenticated() {
       return request.auth != null;
@@ -12,30 +54,76 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-         request.auth.token.email == "mplbsmakda@gmail.com" && 
-         request.auth.token.email_verified == true;
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "mplbsmakda@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isMajorAdmin() {
+      return isAuthenticated() && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'major_admin';
+    }
+
+    function getMajorAdminId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.majorId;
+    }
+
+    function isMajorAdminOf(category) {
+      let majorId = getMajorAdminId();
+      return isMajorAdmin() && get(/databases/$(database)/documents/majors/$(majorId)).data.title == category;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.uid is string && data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'major_admin', 'user'];
+    }
+
+    function isValidNews(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0;
+    }
+
+    function isValidMessage(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.message is string && data.message.size() > 0;
+    }
+
+    function isValidRegistration(data) {
+      return data.fullName is string && data.fullName.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.phone is string && data.phone.size() > 0 &&
+             data.major is string;
     }
 
     // User profiles
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) && 
-        (request.resource.data.role == 'user' || (request.resource.data.role == 'admin' && request.auth.token.email == "mplbsmakda@gmail.com")) &&
-        request.resource.data.keys().hasAll(['uid', 'email', 'role']);
-      allow update: if isOwner(userId) && 
-        request.resource.data.role == resource.data.role;
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+        (request.resource.data.role == 'user' || (request.resource.data.role == 'admin' && request.auth.token.email == "mplbsmakda@gmail.com"));
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
       allow delete: if isAdmin();
     }
 
     // News
     match /news/{newsId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if (isAdmin() || isMajorAdminOf(request.resource.data.category)) && isValidNews(request.resource.data);
+      allow update: if (isAdmin() || isMajorAdminOf(resource.data.category)) && isValidNews(request.resource.data);
+      allow delete: if isAdmin() || isMajorAdminOf(resource.data.category);
     }
 
     // Messages
     match /messages/{messageId} {
-      allow create: if true;
+      allow create: if isValidMessage(request.resource.data);
       allow read, update, delete: if isAdmin();
     }
 
@@ -47,9 +135,41 @@ service cloud.firestore {
 
     // Registrations
     match /registrations/{registrationId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidRegistration(request.resource.data);
       allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
       allow update, delete: if isAdmin();
+    }
+
+    // Public Content Collections
+    match /majors/{id} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /stats/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /testimonials/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /extracurriculars/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /facilities/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /faqs/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /gallery/{id} {
+      allow read: if true;
+      allow create: if isAdmin() || isMajorAdminOf(request.resource.data.category);
+      allow update: if isAdmin() || isMajorAdminOf(resource.data.category);
+      allow delete: if isAdmin() || isMajorAdminOf(resource.data.category);
     }
   }
 }

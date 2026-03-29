@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../../firebase';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
 import { NewsItem } from '../../types';
 import { Plus, Edit2, Trash2, Calendar, User, Loader2 } from 'lucide-react';
 import NewsForm from './NewsForm';
 
-export default function NewsManager() {
+export default function NewsManager({ defaultCategory }: { defaultCategory?: string }) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
+    
+    if (defaultCategory) {
+      q = query(collection(db, 'news'), where('category', '==', defaultCategory), orderBy('createdAt', 'desc'));
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsItem));
       setNews(items);
@@ -123,6 +128,7 @@ export default function NewsManager() {
           <NewsForm
             item={editingNews}
             onClose={() => setIsFormOpen(false)}
+            defaultCategory={defaultCategory}
           />
         )}
       </AnimatePresence>

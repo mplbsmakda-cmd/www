@@ -41,7 +41,9 @@ export function useAuth() {
     }
   }, [user]);
 
-  const isAdmin = user?.email === 'mplbsmakda@gmail.com' && user?.emailVerified;
+  const isAdmin = profile?.role === 'admin' || (user?.email === 'mplbsmakda@gmail.com' && user?.emailVerified);
+  const isMajorAdmin = profile?.role === 'major_admin';
+  const majorId = profile?.majorId;
 
-  return { user, profile, isAdmin, loading };
+  return { user, profile, isAdmin, isMajorAdmin, majorId, loading };
 }
