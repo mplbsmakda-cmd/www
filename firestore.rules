@@ -104,6 +104,21 @@ service cloud.firestore {
              data.major is string;
     }
 
+    function isValidExam(data) {
+      return data.title is string && data.duration is number && data.duration > 0;
+    }
+
+    function isValidSession(data) {
+      return data.uid is string && data.examId is string && data.status in ['ongoing', 'completed'];
+    }
+
+    function isValidGrade(data) {
+      return (data.math is number || !('math' in data)) &&
+             (data.indonesian is number || !('indonesian' in data)) &&
+             (data.english is number || !('english' in data)) &&
+             (data.science is number || !('science' in data));
+    }
+
     // User profiles
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -170,6 +185,25 @@ service cloud.firestore {
       allow create: if isAdmin() || isMajorAdminOf(request.resource.data.category);
       allow update: if isAdmin() || isMajorAdminOf(resource.data.category);
       allow delete: if isAdmin() || isMajorAdminOf(resource.data.category);
+    }
+
+    // Exams
+    match /exams/{examId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidExam(request.resource.data);
+    }
+
+    // Exam Sessions
+    match /exam_sessions/{sessionId} {
+      allow create: if isAuthenticated() && isValidSession(request.resource.data);
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid && resource.data.status == 'ongoing');
+    }
+
+    // Grades
+    match /grades/{registrationId} {
+      allow read: if isAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/registrations/$(registrationId)).data.uid == request.auth.uid);
+      allow write: if isAdmin() && isValidGrade(request.resource.data);
     }
   }
 }

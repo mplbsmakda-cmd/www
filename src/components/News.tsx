@@ -1,15 +1,55 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, User, ArrowRight, Filter } from 'lucide-react';
+import { Calendar, User, ArrowRight, Filter, Share2, Copy, Check } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { NewsItem } from '../types';
+import { cn } from '../lib/utils';
 
 export default function News() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [selectedDateRange, setSelectedDateRange] = useState('Semua Waktu');
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleShare = async (item: NewsItem) => {
+    const shareUrl = `${window.location.origin}/news/${item.id}`;
+    const shareData = {
+      title: item.title,
+      text: item.content.substring(0, 100) + '...',
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedId(item.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+      }
+    }
+  };
+
+  const copyToClipboard = async (id: string) => {
+    const shareUrl = `${window.location.origin}/news/${id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+    }
+  };
 
   const categories = ['Semua', 'Akademik', 'Kegiatan', 'Prestasi', 'Pengumuman'];
   const dateRanges = ['Semua Waktu', 'Bulan Ini', 'Tahun Ini'];
@@ -160,9 +200,38 @@ export default function News() {
                   <p className="text-gray-600 text-sm line-clamp-3 mb-4 leading-relaxed">
                     {item.content}
                   </p>
-                  <div className="flex items-center text-sm font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
-                    Baca Selengkapnya
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+                      Baca Selengkapnya
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShare(item);
+                        }}
+                        className="p-2 bg-gray-50 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Bagikan"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(item.id);
+                        }}
+                        className={cn(
+                          "p-2 rounded-xl transition-all",
+                          copiedId === item.id 
+                            ? "bg-emerald-50 text-emerald-600" 
+                            : "bg-gray-50 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                        )}
+                        title="Salin Tautan"
+                      >
+                        {copiedId === item.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.article>

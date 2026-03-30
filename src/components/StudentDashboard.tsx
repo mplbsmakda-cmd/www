@@ -17,16 +17,18 @@ import {
   Plus
 } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import CBTList from './CBTList';
 
 export default function StudentDashboard() {
   const { user, profile, loading } = useAuth();
   const [registrations, setRegistrations] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'schedule' | 'grades' | 'documents'>('dashboard');
+  const [realGrades, setRealGrades] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'schedule' | 'grades' | 'documents' | 'cbt'>('dashboard');
   const [fetching, setFetching] = useState(true);
   const [greeting, setGreeting] = useState('');
   const [documents, setDocuments] = useState([
@@ -36,16 +38,12 @@ export default function StudentDashboard() {
     { name: 'Pas Foto 3x4', status: 'uploaded', type: 'JPG' },
   ]);
   const [attendance, setAttendance] = useState({
-    present: 42,
-    absent: 2,
-    late: 1,
-    total: 45
+    present: 0,
+    absent: 0,
+    late: 0,
+    total: 100
   });
-  const [finances, setFinances] = useState([
-    { name: 'SPP Januari', amount: 'Rp 250.000', status: 'paid', date: '05 Jan 2026' },
-    { name: 'SPP Februari', amount: 'Rp 250.000', status: 'paid', date: '07 Feb 2026' },
-    { name: 'SPP Maret', amount: 'Rp 250.000', status: 'unpaid', date: '-' },
-  ]);
+  const [finances, setFinances] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const handleUpload = (idx: number) => {
@@ -54,11 +52,7 @@ export default function StudentDashboard() {
     setDocuments(newDocs);
   };
 
-  const mockSchedule = [
-    { day: 'Senin', subjects: [{ time: '07:30 - 09:00', name: 'Matematika', room: 'R.101' }, { time: '09:15 - 10:45', name: 'Bahasa Indonesia', room: 'R.101' }] },
-    { day: 'Selasa', subjects: [{ time: '07:30 - 09:00', name: 'Produktif Kejuruan', room: 'Lab Komputer' }, { time: '09:15 - 10:45', name: 'Bahasa Inggris', room: 'R.102' }] },
-    { day: 'Rabu', subjects: [{ time: '07:30 - 09:00', name: 'Pendidikan Agama', room: 'Masjid' }, { time: '09:15 - 10:45', name: 'PJOK', room: 'Lapangan' }] },
-  ];
+  const mockSchedule: any[] = [];
 
   const mockGrades = [
     { subject: 'Matematika', score: 85, status: 'Lulus' },
@@ -88,8 +82,22 @@ export default function StudentDashboard() {
         const data = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        }));
+        })) as any[];
         setRegistrations(data);
+
+        // Fetch grades for these registrations
+        const gradesData: any[] = [];
+        for (const reg of data) {
+          const gradeDoc = await getDoc(doc(db, 'grades', reg.id));
+          if (gradeDoc.exists()) {
+            gradesData.push({
+              regId: reg.id,
+              major: reg.major,
+              ...gradeDoc.data()
+            });
+          }
+        }
+        setRealGrades(gradesData);
       } catch (error) {
         console.error("Error fetching registrations:", error);
       } finally {
@@ -260,6 +268,16 @@ export default function StudentDashboard() {
               >
                 Nilai Saya
                 {activeTab === 'grades' && <motion.div layoutId="studentTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
+              </button>
+              <button 
+                onClick={() => setActiveTab('cbt')}
+                className={cn(
+                  "pb-4 px-4 text-sm font-bold transition-all relative",
+                  activeTab === 'cbt' ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                Ujian (CBT)
+                {activeTab === 'cbt' && <motion.div layoutId="studentTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
               </button>
               <button 
                 onClick={() => setActiveTab('documents')}
@@ -489,49 +507,77 @@ export default function StudentDashboard() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100"
+                className="space-y-8"
               >
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                    <BookOpen className="h-6 w-6 text-blue-600 mr-3" />
-                    Nilai Akademik
-                  </h2>
-                  <span className="px-4 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">
-                    Rata-rata: 87.0
-                  </span>
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-gray-100">
-                  <table className="w-full text-left">
-                    <thead className="bg-gray-50 border-b border-gray-100">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nilai</th>
-                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {mockGrades.map((grade, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 transition-all">
-                          <td className="px-6 py-4 font-medium text-gray-900">{grade.subject}</td>
-                          <td className="px-6 py-4">
-                            <span className={cn(
-                              "px-3 py-1 rounded-full text-sm font-bold",
-                              grade.score >= 80 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
-                            )}>
-                              {grade.score}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="text-emerald-600 text-sm font-bold flex items-center justify-end">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              {grade.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {realGrades.length > 0 ? (
+                  realGrades.map((grade, gIdx) => (
+                    <div key={gIdx} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                      <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                          <BookOpen className="h-6 w-6 text-blue-600 mr-3" />
+                          Nilai Seleksi - {grade.major}
+                        </h2>
+                        <span className="px-4 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">
+                          Rata-rata: {grade.average?.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="overflow-hidden rounded-2xl border border-gray-100">
+                        <table className="w-full text-left">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nilai</th>
+                              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {[
+                              { subject: 'Matematika', score: grade.math },
+                              { subject: 'Bahasa Indonesia', score: grade.indonesian },
+                              { subject: 'Bahasa Inggris', score: grade.english },
+                              { subject: 'IPA', score: grade.science },
+                            ].map((item, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50 transition-all">
+                                <td className="px-6 py-4 font-medium text-gray-900">{item.subject}</td>
+                                <td className="px-6 py-4">
+                                  <span className={cn(
+                                    "px-3 py-1 rounded-full text-sm font-bold",
+                                    item.score >= 75 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                                  )}>
+                                    {item.score}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className={cn(
+                                    "text-sm font-bold flex items-center justify-end",
+                                    item.score >= 75 ? "text-emerald-600" : "text-amber-600"
+                                  )}>
+                                    {item.score >= 75 ? <CheckCircle className="h-4 w-4 mr-1" /> : <AlertCircle className="h-4 w-4 mr-1" />}
+                                    {item.score >= 75 ? 'Lulus' : 'Di Bawah KKM'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-center">
+                    <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Belum Ada Nilai</h3>
+                    <p className="text-gray-500">Nilai seleksi Anda belum diinput oleh panitia. Silakan cek kembali nanti.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+            {activeTab === 'cbt' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <CBTList />
               </motion.div>
             )}
             {activeTab === 'documents' && (

@@ -63,6 +63,17 @@
         "previousSchool": { "type": "string", "description": "Previous school name" },
         "major": { "type": "string", "description": "Selected major" },
         "status": { "type": "string", "enum": ["pending", "reviewed", "accepted", "rejected"], "description": "Registration status" },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["pending", "uploaded"] },
+              "url": { "type": "string" }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time", "description": "Registration timestamp" }
       },
       "required": ["fullName", "email", "phone", "major"]
@@ -157,6 +168,70 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["url", "category"]
+    },
+    "Exam": {
+      "title": "Computer Based Test",
+      "description": "Stores exam information and questions",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Exam title" },
+        "description": { "type": "string", "description": "Exam description" },
+        "duration": { "type": "integer", "description": "Duration in minutes" },
+        "startTime": { "type": "string", "format": "date-time", "description": "Start time" },
+        "endTime": { "type": "string", "format": "date-time", "description": "End time" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "integer" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "duration", "startTime", "endTime"]
+    },
+    "ExamSession": {
+      "title": "Exam Session",
+      "description": "Stores student exam progress and results",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Student user ID" },
+        "examId": { "type": "string", "description": "Exam ID" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ongoing", "completed"] },
+        "answers": { "type": "object", "description": "Map of questionId to selected option index" },
+        "score": { "type": "number" },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "required": ["uid", "examId", "status"]
+    },
+    "Grade": {
+      "title": "Student Grade",
+      "description": "Stores student selection test grades",
+      "type": "object",
+      "properties": {
+        "math": { "type": "number" },
+        "indonesian": { "type": "number" },
+        "english": { "type": "number" },
+        "science": { "type": "number" },
+        "average": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -207,6 +282,18 @@
     "/gallery/{galleryId}": {
       "schema": "Gallery",
       "description": "Gallery collection"
+    },
+    "/exams/{examId}": {
+      "schema": "Exam",
+      "description": "Exams collection"
+    },
+    "/exam_sessions/{sessionId}": {
+      "schema": "ExamSession",
+      "description": "Student exam sessions"
+    },
+    "/grades/{registrationId}": {
+      "schema": "Grade",
+      "description": "Student grades collection"
     }
   }
 }

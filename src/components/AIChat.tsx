@@ -1,35 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Send, Sparkles, Loader2, Image as ImageIcon, BrainCircuit } from 'lucide-react';
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { MessageSquare, X, Send, Sparkles, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { cn } from '../lib/utils';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
-const SYSTEM_INSTRUCTION = `Anda adalah asisten AI resmi untuk SMK LPPMRI 2 KEDUNGREJA. 
-Tugas Anda adalah membantu calon siswa, orang tua, dan masyarakat umum dengan informasi akurat tentang sekolah.
-
-Informasi Kunci:
-- Nama Sekolah: SMK LPPMRI 2 KEDUNGREJA
-- Lokasi/Alamat: Jl. Raya Kedungreja No. 123, Kedungreja, Kabupaten Cilacap, Jawa Tengah. (Titik koordinat perkiraan: -7.45, 108.85 - arahkan pengguna untuk menggunakan Google Maps dengan kata kunci "SMK LPPMRI 2 KEDUNGREJA" untuk rute pasti).
-- Jurusan/Program Keahlian: 
-  1. Manajemen Perkantoran dan Layanan Bisnis (MPLB)
-  2. Akuntansi dan Keuangan Lembaga (AKL)
-  3. Teknik Jaringan Komputer dan Telekomunikasi (TJKT)
-- Fasilitas Unggulan: Bengkel praktek standar industri untuk tiap jurusan, Laboratorium Komputer High-Spec, Perpustakaan Digital, Lapangan Olahraga luas, Masjid sekolah, dan area hotspot WiFi.
-- Visi & Misi: Menyiapkan generasi unggul, terampil, berkarakter, dan siap bersaing di dunia kerja maupun wirausaha.
-- Keunggulan: Lulusan siap kerja (95% terserap di industri), program beasiswa bagi siswa berprestasi dan kurang mampu, kerjasama luas dengan berbagai perusahaan (Bursa Kerja Khusus/BKK aktif).
-- Pendaftaran Siswa Baru (PPDB): Dibuka secara online melalui website ini maupun offline di sekretariat sekolah. Pendaftaran biasanya dibuka dari bulan Januari hingga Juli.
-
-Gaya Komunikasi:
-- Ramah, profesional, sopan, dan informatif.
-- Gunakan Bahasa Indonesia yang baik, benar, dan mudah dipahami.
-- Jika ditanya tentang lokasi, berikan alamat lengkap dan sarankan menggunakan fitur peta/navigasi.
-- Jika ditanya tentang pendaftaran, jelaskan syarat umum (fotokopi ijazah, KK, akta, pas foto) dan arahkan pengguna untuk mengklik menu "PPDB" atau "Pendaftaran" di website ini.
-- Jika Anda tidak tahu jawaban pasti, berikan informasi kontak sekolah (Email: info@smklppmri2kedungreja.sch.id, Telp: (0280) 123456) agar mereka bisa bertanya langsung.
-
-Anda memiliki akses ke alat Google Search untuk mencari berita terkini dan Google Maps untuk membantu navigasi lokasi.`;
 
 export default function AIChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,10 +10,7 @@ export default function AIChat() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isThinking, setIsThinking] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,64 +18,36 @@ export default function AIChat() {
     }
   }, [messages]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSend = async () => {
-    if ((!input.trim() && !selectedImage) || isLoading) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
-    const imageToUpload = selectedImage;
-    
     setInput('');
-    setSelectedImage(null);
     
-    setMessages(prev => [...prev, { 
-      role: 'user', 
-      content: userMessage || (imageToUpload ? "Menganalisis gambar..." : "") 
-    }]);
+    const newMessages = [...messages, { 
+      role: 'user' as const, 
+      content: userMessage 
+    }];
+    
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      const modelName = isThinking ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
-      const parts: any[] = [{ text: userMessage || "Menganalisis gambar..." }];
-
-      if (imageToUpload) {
-        parts.push({
-          inlineData: {
-            data: imageToUpload.split(',')[1],
-            mimeType: "image/jpeg"
-          }
-        });
-      }
-
-      const isLocationQuery = /lokasi|alamat|peta|rute|dimana|posisi|maps/i.test(userMessage);
-      
-      // Explicitly choose only one tool to avoid "cannot be combined" error
-      const tools = isLocationQuery ? [{ googleMaps: {} }] : [{ googleSearch: {} }];
-
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: [{ role: "user", parts }],
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          tools: tools,
-          thinkingConfig: isThinking ? { thinkingLevel: ThinkingLevel.HIGH } : undefined
-        }
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMessages
+        }),
       });
 
-      const aiResponse = response.text || "Maaf, saya tidak bisa memproses permintaan Anda saat ini.";
+      if (!response.ok) throw new Error("Gagal menghubungi server AI.");
+
+      const data = await response.json();
+      const aiResponse = data.content || "Maaf, saya tidak bisa memproses permintaan Anda saat ini.";
       setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
     } catch (error) {
-      console.error("Gemini Error:", error);
+      console.error("AI Proxy Error:", error);
       setMessages(prev => [...prev, { role: 'ai', content: "Maaf, terjadi kesalahan teknis. Silakan coba lagi nanti." }]);
     } finally {
       setIsLoading(false);
@@ -135,22 +76,9 @@ export default function AIChat() {
                 <Sparkles className="h-5 w-5" />
                 <span className="font-bold">Asisten AI SMK</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => setIsThinking(!isThinking)}
-                  className={cn(
-                    "p-2 rounded-lg transition-colors flex items-center space-x-1 text-xs font-medium",
-                    isThinking ? "bg-white text-blue-600" : "bg-blue-500 text-white hover:bg-blue-400"
-                  )}
-                  title="Thinking Mode"
-                >
-                  <BrainCircuit className="h-4 w-4" />
-                  <span>{isThinking ? 'High' : 'Normal'}</span>
-                </button>
-                <button onClick={() => setIsOpen(false)} className="hover:bg-blue-500 p-1 rounded-lg transition-colors">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <button onClick={() => setIsOpen(false)} className="hover:bg-blue-500 p-1 rounded-lg transition-colors">
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
@@ -173,40 +101,14 @@ export default function AIChat() {
                 <div className="flex justify-start">
                   <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 rounded-tl-none flex items-center space-x-2">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-xs text-gray-500">{isThinking ? 'Berpikir mendalam...' : 'Mengetik...'}</span>
+                    <span className="text-xs text-gray-500">Mengetik...</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {selectedImage && (
-              <div className="px-4 py-2 bg-gray-100 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <img src={selectedImage} alt="Preview" className="h-10 w-10 object-cover rounded-lg border border-gray-300" />
-                  <span className="text-xs text-gray-500">Gambar siap dianalisis</span>
-                </div>
-                <button onClick={() => setSelectedImage(null)} className="text-gray-400 hover:text-red-500">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
             <div className="p-4 bg-white border-t border-gray-100">
               <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                  title="Upload Gambar"
-                >
-                  <ImageIcon className="h-5 w-5" />
-                </button>
                 <input
                   type="text"
                   value={input}

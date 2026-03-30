@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
-import { Newspaper, MessageSquare, Plus, Loader2, LayoutDashboard, Users, TrendingUp, Clock, Settings, Image as ImageIcon, HelpCircle, Trophy, Building2, Briefcase, BarChart3, Quote, Globe, Activity } from 'lucide-react';
+import { Newspaper, MessageSquare, Plus, Loader2, LayoutDashboard, Users, TrendingUp, Clock, Settings, Image as ImageIcon, HelpCircle, Trophy, Building2, Briefcase, BarChart3, Quote, Globe, Activity, Monitor } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import NewsManager from './admin/NewsManager';
@@ -21,12 +21,14 @@ import AdminAIAgent from './admin/AdminAIAgent';
 import Analytics from './admin/Analytics';
 import SystemSettingsManager from './admin/SystemSettingsManager';
 import SystemLogsManager from './admin/SystemLogsManager';
+import GradesManager from './admin/GradesManager';
+import ExamManager from './admin/ExamManager';
 import { logAction } from '../services/logService';
 import { cn } from '../lib/utils';
 
 export default function AdminDashboard() {
   const { isAdmin, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'news' | 'messages' | 'registrations' | 'settings' | 'gallery' | 'faq' | 'extras' | 'facilities' | 'majors' | 'stats' | 'testimonials' | 'users' | 'system' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'news' | 'messages' | 'registrations' | 'settings' | 'gallery' | 'faq' | 'extras' | 'facilities' | 'majors' | 'stats' | 'testimonials' | 'users' | 'system' | 'logs' | 'grades' | 'cbt'>('analytics');
   const [stats, setStats] = useState({ newsCount: 0, messageCount: 0, userCount: 0, registrationCount: 0 });
   const [registrationData, setRegistrationData] = useState<any[]>([]);
 
@@ -136,6 +138,21 @@ export default function AdminDashboard() {
             )}
           </button>
           <button
+            onClick={() => setActiveTab('analytics')}
+            className={cn(
+              "pb-4 px-4 text-sm font-medium transition-all relative",
+              activeTab === 'analytics' ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
+            </div>
+            {activeTab === 'analytics' && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab('registrations')}
             className={cn(
               "pb-4 px-4 text-sm font-medium transition-all relative",
@@ -147,6 +164,36 @@ export default function AdminDashboard() {
               <span>Pendaftaran</span>
             </div>
             {activeTab === 'registrations' && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('grades')}
+            className={cn(
+              "pb-4 px-4 text-sm font-medium transition-all relative",
+              activeTab === 'grades' ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>Nilai</span>
+            </div>
+            {activeTab === 'grades' && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('cbt')}
+            className={cn(
+              "pb-4 px-4 text-sm font-medium transition-all relative",
+              activeTab === 'cbt' ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <div className="flex items-center space-x-2">
+              <Monitor className="h-4 w-4" />
+              <span>CBT</span>
+            </div>
+            {activeTab === 'cbt' && (
               <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
             )}
           </button>
@@ -361,13 +408,13 @@ export default function AdminDashboard() {
                 <div className="text-sm text-gray-500">Pendaftaran Baru</div>
               </div>
             </div>
-
-            <Analytics stats={stats} registrationData={registrationData} />
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          {activeTab === 'overview' ? (
+          {activeTab === 'analytics' ? (
+            <Analytics />
+          ) : activeTab === 'overview' ? (
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-gray-900">Aktivitas Terakhir</h2>
               <p className="text-gray-500 italic">Fitur log aktivitas akan segera hadir.</p>
@@ -398,6 +445,10 @@ export default function AdminDashboard() {
             <SystemSettingsManager />
           ) : activeTab === 'logs' ? (
             <SystemLogsManager />
+          ) : activeTab === 'grades' ? (
+            <GradesManager />
+          ) : activeTab === 'cbt' ? (
+            <ExamManager />
           ) : (
             <RegistrationManager />
           )}

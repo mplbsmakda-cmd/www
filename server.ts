@@ -15,6 +15,55 @@ async function startServer() {
 
   app.use(express.json());
 
+  // User AI Chat Proxy (Now using OpenRouter step-1-flash)
+  app.post("/api/chat", async (req, res) => {
+    const { messages } = req.body;
+    
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://smk-lppmri-2.run.app",
+          "X-Title": "SMK LPPMRI 2 User Assistant",
+        },
+        body: JSON.stringify({
+          model: "stepfun/step-1-flash",
+          messages: [
+            {
+              role: "system",
+              content: `Anda adalah asisten AI resmi untuk SMK LPPMRI 2 KEDUNGREJA. 
+Tugas Anda adalah membantu calon siswa, orang tua, dan masyarakat umum dengan informasi akurat tentang sekolah.
+
+Informasi Kunci:
+- Nama Sekolah: SMK LPPMRI 2 KEDUNGREJA
+- Lokasi/Alamat: Jl. Raya Kedungreja No. 123, Kedungreja, Kabupaten Cilacap, Jawa Tengah.
+- Jurusan: MPLB, AKL, TJKT.
+- Fasilitas: Bengkel industri, Lab Komputer, Perpustakaan Digital, Lapangan Olahraga, Masjid, WiFi.
+- Visi & Misi: Menyiapkan generasi unggul, terampil, berkarakter.
+- Keunggulan: Lulusan siap kerja (95%), beasiswa, kerjasama industri luas.
+- PPDB: Online via website atau offline di sekolah (Januari - Juli).
+
+Gaya Komunikasi: Ramah, profesional, sopan, informatif. Gunakan Bahasa Indonesia yang baik.`
+            },
+            ...messages.map((msg: any) => ({
+              role: msg.role === 'ai' ? 'assistant' : 'user',
+              content: msg.content
+            }))
+          ]
+        }),
+      });
+
+      const data = await response.json();
+      const aiContent = data.choices?.[0]?.message?.content || "Maaf, saya tidak bisa memproses permintaan Anda saat ini.";
+      res.json({ content: aiContent });
+    } catch (error) {
+      console.error("OpenRouter User Chat Error:", error);
+      res.status(500).json({ error: "Failed to communicate with AI Agent" });
+    }
+  });
+
   // AI Agent Proxy for Admin Panel
   app.post("/api/admin/ai", async (req, res) => {
     const { messages } = req.body;

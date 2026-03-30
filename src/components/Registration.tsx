@@ -20,7 +20,9 @@ import {
   ShieldCheck,
   CreditCard,
   Briefcase,
-  Loader2
+  Loader2,
+  Upload,
+  FileCheck
 } from 'lucide-react';
 import { db, auth, googleProvider } from '../firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, query, where, getDocs } from 'firebase/firestore';
@@ -54,7 +56,15 @@ export default function Registration() {
     parentPhone: '',
     parentOccupation: '',
     
-    // Step 4: Final
+    // Step 4: Documents
+    documents: [
+      { name: 'Kartu Keluarga (KK)', status: 'pending', required: true },
+      { name: 'Ijazah / SKL', status: 'pending', required: true },
+      { name: 'Akta Kelahiran', status: 'pending', required: true },
+      { name: 'KTP Orang Tua', status: 'pending', required: true },
+    ],
+    
+    // Step 5: Final
     agreedToTerms: false
   });
 
@@ -152,6 +162,14 @@ export default function Registration() {
       }
     } else if (step === 3) {
       if (!formData.parentName || !formData.parentPhone || !formData.parentOccupation) return false;
+    } else if (step === 4) {
+      const allRequiredUploaded = formData.documents
+        .filter(d => d.required)
+        .every(d => d.status === 'uploaded');
+      if (!allRequiredUploaded) {
+        setError("Harap unggah semua dokumen wajib.");
+        return false;
+      }
     }
     setError(null);
     return true;
@@ -164,6 +182,13 @@ export default function Registration() {
   };
 
   const prevStep = () => setStep(prev => prev - 1);
+
+  const handleUpload = (index: number) => {
+    // Simulate upload
+    const newDocs = [...formData.documents];
+    newDocs[index].status = 'uploaded';
+    setFormData(prev => ({ ...prev, documents: newDocs }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -354,7 +379,7 @@ export default function Registration() {
                     <div className="flex items-center justify-between mb-8">
                       <h2 className="text-2xl font-bold text-gray-900">Formulir Pendaftaran</h2>
                       <div className="flex items-center space-x-2">
-                        {[1, 2, 3, 4].map((s) => (
+                        {[1, 2, 3, 4, 5].map((s) => (
                           <div 
                             key={s} 
                             className={cn(
@@ -490,6 +515,59 @@ export default function Registration() {
                             className="space-y-6"
                           >
                             <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                              <Upload className="h-5 w-5 mr-2 text-blue-600" />
+                              Unggah Dokumen (Digital)
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Harap unggah scan dokumen asli dalam format PDF atau Gambar (Maks 2MB).
+                            </p>
+                            <div className="grid grid-cols-1 gap-4">
+                              {formData.documents.map((doc, index) => (
+                                <div key={index} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50">
+                                  <div className="flex items-center">
+                                    <div className={cn(
+                                      "p-2 rounded-xl mr-3",
+                                      doc.status === 'uploaded' ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
+                                    )}>
+                                      {doc.status === 'uploaded' ? <FileCheck className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-bold text-gray-900">
+                                        {doc.name} {doc.required && <span className="text-red-500">*</span>}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {doc.status === 'uploaded' ? 'Berhasil diunggah' : 'Menunggu unggahan'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpload(index)}
+                                    disabled={doc.status === 'uploaded'}
+                                    className={cn(
+                                      "px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                                      doc.status === 'uploaded' 
+                                        ? "bg-emerald-500 text-white cursor-default" 
+                                        : "bg-white border border-blue-200 text-blue-600 hover:bg-blue-50"
+                                    )}
+                                  >
+                                    {doc.status === 'uploaded' ? 'Selesai' : 'Unggah'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {step === 5 && (
+                          <motion.div
+                            key="step5"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
                               <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
                               Konfirmasi & Pernyataan
                             </h3>
@@ -550,7 +628,7 @@ export default function Registration() {
                           </button>
                         ) : <div />}
 
-                        {step < 4 ? (
+                        {step < 5 ? (
                           <button
                             type="button"
                             onClick={nextStep}
